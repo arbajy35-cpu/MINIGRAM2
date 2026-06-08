@@ -33,6 +33,20 @@
   </p>
 </div>
 
+<script>
+alert(
+  "Supabase Library: " +
+  typeof window.supabase
+);
+</script>
+<script>
+fetch("../supabase.js")
+.then(() => alert("FOUND"))
+.catch(() => alert("NOT FOUND"));
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="../supabase.js"></script>
 <script src="signup.js"></script>
 
 </body>

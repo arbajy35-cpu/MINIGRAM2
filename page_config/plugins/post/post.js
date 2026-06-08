@@ -1,69 +1,68 @@
-console.log(" post.js loaded");
+console.log(" POST ENGINE READY (STATE SINGLE SOURCE)");
+
+//////////////////////////////////////////////////
+//  POST PLUGIN (STATE ONLY — NO CACHE)
+//////////////////////////////////////////////////
 
 window.POST_PLUGIN = {
 
-  //////////////////////////////////////////////////
-  //  FETCH POSTS
-  //////////////////////////////////////////////////
+  async fetch(from = 0, to = 10, force = false) {
 
-  async fetch(from, to){
+    try {
 
-    if(!window.supabaseClient){
-      throw new Error(
-        "Supabase not initialized"
-      );
+      if (!window.supabaseClient) return [];
+
+      const { data, error } =
+        await supabaseClient
+          .from("minigram_feed")
+          .select("id, username, caption, image_url, likes_count, comments_count, created_at")
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+      if (error) {
+        console.error("FETCH ERROR:", error);
+        return [];
+      }
+
+      return data || [];
+
+    } catch (err) {
+      console.error("FETCH FAIL:", err);
+      return [];
     }
-
-    const { data, error } =
-      await supabaseClient
-
-      .from("posts")
-
-      .select("*")
-
-      .order(
-        "created_at",
-        {
-          ascending:false
-        }
-      )
-
-      .range(from, to);
-
-    if(error) throw error;
-
-    return window.optimizePosts
-
-      ? window.optimizePosts(data)
-
-      : data;
   },
 
-  //////////////////////////////////////////////////
-  //  OFFLINE FALLBACK
-  //////////////////////////////////////////////////
+  async add(post) {
 
-  fallback(){
+    try {
 
-    return [{
+      const { data, error } =
+        await supabaseClient
+          .from("minigram_feed")
+          .insert([{
+            username: post.username,
+            image_url: post.image_url,
+            caption: post.caption,
+            likes_count: 0,
+            comments_count: 0,
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
 
-      id: "MINIGRAM",
+      if (error) {
+        console.error(error);
+        return null;
+      }
 
-      username: "minigram v2",
+      return data;
 
-      image_url:
-        "https://picsum.photos/400",
-
-      caption:
-        " Offline mode ",
-
-      likes: 0,
-
-      created_at:
-        new Date()
-
-    }];
-
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
   }
 
 };
+
+console.log(" POST ENGINE READY (NO CACHE, STATE CONTROLLED)");

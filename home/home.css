@@ -490,3 +490,63 @@ body{
   }
 
 }
+
+/* =========================================
+    LIKE BUTTON FIX
+========================================= */
+
+.likeBtn{
+
+  opacity: .75;
+
+  transition:
+    transform .15s ease,
+    opacity .15s ease;
+
+}
+
+.likeBtn.liked{
+
+  opacity: 1;
+
+  transform: scale(1.08);
+
+}
+
+/*  DEFAULT HEART */
+
+.likeBtn svg{
+
+  fill: none !important;
+
+  color: #fff !important;
+
+  stroke: currentColor !important;
+
+  stroke-width: 2;
+
+}
+
+/*  LIKED HEART */
+
+.likeBtn.liked svg{
+
+  fill: #ff3040 !important;
+
+  color: #ff3040 !important;
+
+  stroke: #ff3040 !important;
+
+}
+
+.postComments{
+
+  padding:
+    4px 12px 0;
+
+  font-size: 14px;
+
+  color:
+    rgba(255,255,255,.75);
+
+}

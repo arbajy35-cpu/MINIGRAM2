@@ -295,28 +295,100 @@ async function boot(){
 
     await Promise.all([
 
-      loadScript(
-        "supabase.js"
-      ),
+  // 🔥 3. CORE SYSTEM
+  loadScript("main_js/bundles/core.bundle.js"),
+  loadScript("main_js/bundles/ui.bundle.js"),
 
-      loadScript(
-        "main_js/bundles/core.bundle.js"
-      ),
+  // 🔥 4. CONFIG SYSTEM
+  loadScript("main_js/pageloader/config.js"),
+  loadScript("main_js/config_Loader.js")
 
-      loadScript(
-        "main_js/bundles/ui.bundle.js"
-      ),
+]);
+   
+await loadScript(
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+);
 
-      loadScript(
-        "main_js/pageloader/config.js"
-      ),
+await loadScript(
+  "supabase.js"
+);
 
-      loadScript(
-        "main_js/config_Loader.js"
-      )
+ 
+    //////////////////////////////////////////////////
+// 🔐 AUTH CHECK
+//////////////////////////////////////////////////
 
-    ]);
+try {
 
+  const client =
+    window.supabaseClient ||
+    window.db;
+
+  if (!client) {
+
+    console.error(
+      "❌ SUPABASE CLIENT NOT FOUND"
+    );
+
+    document
+      .getElementById("loader")
+      ?.remove();
+
+    window.location.href =
+      "./sighup/signup.html";
+
+    return;
+
+  }
+
+  const {
+    data: { session }
+  } = await client.auth.getSession();
+
+  if (!session) {
+
+    console.log(
+      "🔒 USER NOT LOGGED IN"
+    );
+
+    document
+      .getElementById("loader")
+      ?.remove();
+
+    setTimeout(() => {
+
+      window.location.href =
+        "./sighup/signup.html";
+
+    }, 300);
+
+    return;
+
+  }
+
+  console.log(
+    "✅ LOGGED IN:",
+    session.user?.email
+  );
+
+} catch (e) {
+
+  console.error(
+    "❌ SESSION CHECK FAILED:",
+    e
+  );
+
+  document
+    .getElementById("loader")
+    ?.remove();
+
+  window.location.href =
+    "./sighup/signup.html";
+
+  return;
+
+}
+     
     //////////////////////////////////////////////////
     // 🚀 PAGE CORE
     //////////////////////////////////////////////////
@@ -338,7 +410,10 @@ async function boot(){
       loadScript(
         "main_js/pageloader/home.js"
       ),
-
+      
+      loadScript(
+        "main_js/minigramPost.js"
+      ),
       loadScript(
         "global/icons.js"
       )

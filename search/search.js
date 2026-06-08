@@ -163,7 +163,7 @@ async function loadMorePosts() {
     if (!window.supabaseClient) throw new Error("Supabase missing");
 
     const { data, error } = await window.supabaseClient
-      .from("posts")
+      .from("minigram_feed")
       .select("id, image_url, username")
       .range(page * limit, (page + 1) * limit - 1);
 
@@ -206,7 +206,7 @@ async function searchUsers() {
 
   try {
     const { data, error } = await window.supabaseClient
-      .from("posts")
+      .from("minigram_feed")
       .select("*")
       .ilike("username", `%${text}%`)
       .limit(20);

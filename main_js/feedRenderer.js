@@ -205,9 +205,26 @@ function renderFeed(
     const likes =
 
       Number(
-        post.likes
-      ) || 0;
 
+        post.likes_count ??
+        post.likes ??
+        0
+
+      );
+    //////////////////////////////////////////////////
+// 💬 COMMENTS
+//////////////////////////////////////////////////
+
+const comments =
+
+  Number(
+
+    post.comments_count ??
+    post.comments ??
+    0
+
+  );
+  
     //////////////////////////////////////////////////
     // 🕒 TIME
     //////////////////////////////////////////////////
@@ -277,7 +294,12 @@ function renderFeed(
       clone.querySelector(
         ".postLikes"
       );
-
+     
+     const commentsEl =
+        clone.querySelector(
+       ".postComments"
+      );
+     
     const timeEl =
       clone.querySelector(
         ".postTime"
@@ -297,6 +319,41 @@ function renderFeed(
       clone.querySelector(
         ".likeBtn"
       );
+
+    //////////////////////////////////////////////////
+    // ❤️ FIX BUTTON STATE
+    //////////////////////////////////////////////////
+
+    requestAnimationFrame(()=>{
+
+      const likedKey =
+        "liked_" + post.id;
+
+      const isLiked =
+
+        localStorage.getItem(
+          likedKey
+        ) === "true";
+
+      //////////////////////////////////////////////////
+      // ❤️ BUTTON CLASS
+      //////////////////////////////////////////////////
+
+      if(isLiked){
+
+        likeBtn?.classList.add(
+          "liked"
+        );
+
+      }else{
+
+        likeBtn?.classList.remove(
+          "liked"
+        );
+
+      }
+
+    });
 
     const commentBtn =
       clone.querySelector(
@@ -324,7 +381,7 @@ function renderFeed(
       username;
 
     //////////////////////////////////////////////////
-    // 🖼️ IMAGE OPTIMIZATION
+    // 🖼️ IMAGE
     //////////////////////////////////////////////////
 
     img.loading =
@@ -367,15 +424,27 @@ function renderFeed(
     };
 
     //////////////////////////////////////////////////
-    // ❤️ LIKES
+    // ❤️ LIKES UI
     //////////////////////////////////////////////////
 
     likesEl.textContent =
       likes + " likes";
 
+    likesEl.dataset.likes =
+      likes;
+
     likesEl.id =
       "likes-" + post.id;
 
+     commentsEl.textContent =
+  comments + " comments";
+
+commentsEl.dataset.comments =
+  comments;
+
+commentsEl.id =
+  "comments-" + post.id;
+  
     //////////////////////////////////////////////////
     // 🕒 TIME
     //////////////////////////////////////////////////
@@ -461,14 +530,12 @@ function renderFeed(
     //////////////////////////////////////////////////
 
     commentBtn?.addEventListener(
-      "click",
-      ()=>{
+  "click",
+  ()=>{
 
-        window.commentPost?.(
-          post.id
-        );
+    window.openComments?.(post.id);
 
-      },
+  },
       {
         passive: true
       }
@@ -584,51 +651,27 @@ function renderFeed(
 window.loadMoreFeed =
 function(){
 
-  //////////////////////////////////////////////////
-  // 🛑 END CHECK
-  //////////////////////////////////////////////////
-
   if(
     window.FEED_RENDER_STATE
     .ended
   ){
-
     return;
-
   }
-
-  //////////////////////////////////////////////////
-  // 🛑 LOADING CHECK
-  //////////////////////////////////////////////////
 
   if(
     window.FEED_RENDER_STATE
     .loading
   ){
-
     return;
-
   }
-
-  //////////////////////////////////////////////////
-  // 🚀 START
-  //////////////////////////////////////////////////
 
   window.FEED_RENDER_STATE
     .loading = true;
-
-  //////////////////////////////////////////////////
-  // 📦 NEXT PAGE
-  //////////////////////////////////////////////////
 
   const nextPage =
 
     window.FEED_RENDER_STATE
     .page + 1;
-
-  //////////////////////////////////////////////////
-  // 💤 IDLE RENDER
-  //////////////////////////////////////////////////
 
   requestIdleCallback(()=>{
 
@@ -642,10 +685,6 @@ function(){
       nextPage
 
     );
-
-    //////////////////////////////////////////////////
-    // ✅ DONE
-    //////////////////////////////////////////////////
 
     window.FEED_RENDER_STATE
       .loading = false;
@@ -661,25 +700,13 @@ function(){
 window.initFeedInfiniteScroll =
 function(){
 
-  //////////////////////////////////////////////////
-  // 🛑 REMOVE OLD
-  //////////////////////////////////////////////////
-
   window.removeEventListener(
     "scroll",
     window.__FEED_SCROLL_HANDLER
   );
 
-  //////////////////////////////////////////////////
-  // 🚀 NEW HANDLER
-  //////////////////////////////////////////////////
-
   window.__FEED_SCROLL_HANDLER =
   function(){
-
-    //////////////////////////////////////////////////
-    // 📜 SCROLL CHECK
-    //////////////////////////////////////////////////
 
     const nearBottom =
 
@@ -689,10 +716,6 @@ function(){
       document.body.offsetHeight
       - 1200;
 
-    //////////////////////////////////////////////////
-    // 🚀 LOAD MORE
-    //////////////////////////////////////////////////
-
     if(nearBottom){
 
       window.loadMoreFeed?.();
@@ -700,10 +723,6 @@ function(){
     }
 
   };
-
-  //////////////////////////////////////////////////
-  // 🚀 ADD EVENT
-  //////////////////////////////////////////////////
 
   window.addEventListener(
 
@@ -732,4 +751,4 @@ renderFeed;
 
 console.log(
   "🎉 FEED RENDERER V2 READY"
-);
+);2

@@ -2,22 +2,70 @@
 
 /* FILE: main_js/feedRenderer.js */
 
-// ================================
-// RENDER FEED (OPTIMIZED VERSION)
-// ================================
-function renderFeed(posts = [], append = true){
+//////////////////////////////////////////////////
+// 🚀 FEED RENDERER V2 (ULTRA OPTIMIZED)
+//////////////////////////////////////////////////
+
+console.log(
+  "🚀 FEED RENDERER V2 LOADED"
+);
+
+//////////////////////////////////////////////////
+// 📦 CONFIG
+//////////////////////////////////////////////////
+
+const BATCH_SIZE =
+
+  window.IS_LOW_END
+  ? 5
+  : 10;
+
+//////////////////////////////////////////////////
+// 🌍 GLOBAL STATE
+//////////////////////////////////////////////////
+
+window.FEED_RENDER_STATE =
+window.FEED_RENDER_STATE || {
+
+  posts: [],
+  page: 0,
+  loading: false,
+  ended: false
+
+};
+
+//////////////////////////////////////////////////
+// 🚀 MAIN RENDER FEED
+//////////////////////////////////////////////////
+
+function renderFeed(
+  posts = [],
+  append = true,
+  page = 0
+){
+
+  //////////////////////////////////////////////////
+  // 📦 FEED
+  //////////////////////////////////////////////////
 
   const feed =
-    document.getElementById("feed");
+    document.getElementById(
+      "feed"
+    );
 
   const template =
-    document.getElementById("postTemplate");
+    document.getElementById(
+      "postTemplate"
+    );
 
   //////////////////////////////////////////////////
-  // 🔥 HARD SAFETY
+  // 🛑 HARD SAFETY
   //////////////////////////////////////////////////
 
-  if(!feed || !template){
+  if(
+    !feed ||
+    !template
+  ){
 
     console.error(
       "❌ feed/template missing"
@@ -27,20 +75,63 @@ function renderFeed(posts = [], append = true){
 
   }
 
-  if(!Array.isArray(posts))
+  if(
+    !Array.isArray(posts)
+  ){
+
     return;
 
+  }
+
   //////////////////////////////////////////////////
-  // 🧹 CLEAN STATES
+  // 🧹 REMOVE EMPTY STATE
   //////////////////////////////////////////////////
 
   document
-    .getElementById("emptyFeed")
+    .getElementById(
+      "emptyFeed"
+    )
     ?.remove();
 
   //////////////////////////////////////////////////
+  // 📦 BATCH CALCULATION
+  //////////////////////////////////////////////////
+
+  const start =
+    page * BATCH_SIZE;
+
+  const end =
+    start + BATCH_SIZE;
+
+  //////////////////////////////////////////////////
+  // ✂️ ONLY RENDER BATCH
+  //////////////////////////////////////////////////
+
+  const batch =
+    posts.slice(
+      start,
+      end
+    );
+
+  //////////////////////////////////////////////////
+  // 🛑 NO POSTS
+  //////////////////////////////////////////////////
+
+  if(!batch.length){
+
+    console.log(
+      "⚠️ No more posts"
+    );
+
+    window.FEED_RENDER_STATE
+      .ended = true;
+
+    return;
+
+  }
+
+  //////////////////////////////////////////////////
   // 🚀 DOCUMENT FRAGMENT
-  // (BIG PERFORMANCE BOOST)
   //////////////////////////////////////////////////
 
   const fragment =
@@ -50,44 +141,104 @@ function renderFeed(posts = [], append = true){
   // 🚀 RENDER POSTS
   //////////////////////////////////////////////////
 
-  posts.forEach(post => {
+  batch.forEach(post => {
 
     //////////////////////////////////////////////////
     // 🛡️ SAFETY
     //////////////////////////////////////////////////
 
-    if(!post || !post.id)
-      return;
-
     if(
-      document.getElementById(
-        "post-" + post.id
-      )
+      !post ||
+      !post.id
     ) return;
 
     //////////////////////////////////////////////////
-    // 📦 DATA
+    // ♻️ DUPLICATE CHECK
+    //////////////////////////////////////////////////
+
+    if(
+
+      document.getElementById(
+        "post-" + post.id
+      )
+
+    ) return;
+
+    //////////////////////////////////////////////////
+    // 👤 USER DATA
     //////////////////////////////////////////////////
 
     const username =
-      post.username || "user";
+      post.username ||
+      "user";
+
+    //////////////////////////////////////////////////
+    // 🖼️ AVATAR
+    //////////////////////////////////////////////////
 
     const avatar =
+
       post.avatar_url ||
+
       `https://i.pravatar.cc/150?u=${
-        encodeURIComponent(username)
+        encodeURIComponent(
+          username
+        )
       }`;
 
+    //////////////////////////////////////////////////
+    // 🖼️ IMAGE
+    //////////////////////////////////////////////////
+
     const image =
-      post.image_url || "";
+      post.image_url ||
+      "";
+
+    //////////////////////////////////////////////////
+    // 📝 CAPTION
+    //////////////////////////////////////////////////
 
     const caption =
-      post.caption || "";
+      post.caption ||
+      "";
+
+    //////////////////////////////////////////////////
+    // ❤️ LIKES
+    //////////////////////////////////////////////////
+
+    const likes =
+
+      Number(
+
+        post.likes_count ??
+        post.likes ??
+        0
+
+      );
+    //////////////////////////////////////////////////
+// 💬 COMMENTS
+//////////////////////////////////////////////////
+
+const comments =
+
+  Number(
+
+    post.comments_count ??
+    post.comments ??
+    0
+
+  );
+  
+    //////////////////////////////////////////////////
+    // 🕒 TIME
+    //////////////////////////////////////////////////
 
     const time =
+
       (
         typeof window.formatTime ===
         "function" &&
+
         post.created_at
       )
 
@@ -97,20 +248,23 @@ function renderFeed(posts = [], append = true){
 
       : "";
 
-    const likes =
-      Number(post.likes) || 0;
-
     //////////////////////////////////////////////////
     // 📄 CLONE TEMPLATE
     //////////////////////////////////////////////////
 
     const clone =
-      template.content.cloneNode(
-        true
-      );
+
+      template.content
+      .cloneNode(true);
+
+    //////////////////////////////////////////////////
+    // 📦 MAIN POST
+    //////////////////////////////////////////////////
 
     const el =
-      clone.querySelector(".post");
+      clone.querySelector(
+        ".post"
+      );
 
     if(!el) return;
 
@@ -122,7 +276,7 @@ function renderFeed(posts = [], append = true){
       "post-" + post.id;
 
     //////////////////////////////////////////////////
-    // 🚀 FAST SELECTORS
+    // ⚡ FAST ELEMENTS
     //////////////////////////////////////////////////
 
     const avatarEl =
@@ -144,7 +298,12 @@ function renderFeed(posts = [], append = true){
       clone.querySelector(
         ".postLikes"
       );
-
+     
+     const commentsEl =
+        clone.querySelector(
+       ".postComments"
+      );
+     
     const timeEl =
       clone.querySelector(
         ".postTime"
@@ -164,6 +323,41 @@ function renderFeed(posts = [], append = true){
       clone.querySelector(
         ".likeBtn"
       );
+
+    //////////////////////////////////////////////////
+    // ❤️ FIX BUTTON STATE
+    //////////////////////////////////////////////////
+
+    requestAnimationFrame(()=>{
+
+      const likedKey =
+        "liked_" + post.id;
+
+      const isLiked =
+
+        localStorage.getItem(
+          likedKey
+        ) === "true";
+
+      //////////////////////////////////////////////////
+      // ❤️ BUTTON CLASS
+      //////////////////////////////////////////////////
+
+      if(isLiked){
+
+        likeBtn?.classList.add(
+          "liked"
+        );
+
+      }else{
+
+        likeBtn?.classList.remove(
+          "liked"
+        );
+
+      }
+
+    });
 
     const commentBtn =
       clone.querySelector(
@@ -191,7 +385,7 @@ function renderFeed(posts = [], append = true){
       username;
 
     //////////////////////////////////////////////////
-    // 🖼️ IMAGE (OPTIMIZED)
+    // 🖼️ IMAGE
     //////////////////////////////////////////////////
 
     img.loading =
@@ -203,16 +397,14 @@ function renderFeed(posts = [], append = true){
     img.src =
       image;
 
-    img.setAttribute(
-      "data-id",
-      post.id
-    );
+    img.dataset.id =
+      post.id;
 
     //////////////////////////////////////////////////
-    // 🖼️ IMAGE LOAD
+    // 🖼️ IMAGE LOADED
     //////////////////////////////////////////////////
 
-    img.onload = () => {
+    img.onload = ()=>{
 
       img.classList.remove(
         "loading"
@@ -225,10 +417,10 @@ function renderFeed(posts = [], append = true){
     };
 
     //////////////////////////////////////////////////
-    // ❌ IMAGE FAIL SAFE
+    // ❌ IMAGE ERROR
     //////////////////////////////////////////////////
 
-    img.onerror = () => {
+    img.onerror = ()=>{
 
       img.src =
         "https://via.placeholder.com/400x400?text=No+Image";
@@ -236,15 +428,27 @@ function renderFeed(posts = [], append = true){
     };
 
     //////////////////////////////////////////////////
-    // ❤️ LIKES
+    // ❤️ LIKES UI
     //////////////////////////////////////////////////
 
     likesEl.textContent =
       likes + " likes";
 
+    likesEl.dataset.likes =
+      likes;
+
     likesEl.id =
       "likes-" + post.id;
 
+     commentsEl.textContent =
+  comments + " comments";
+
+commentsEl.dataset.comments =
+  comments;
+
+commentsEl.id =
+  "comments-" + post.id;
+  
     //////////////////////////////////////////////////
     // 🕒 TIME
     //////////////////////////////////////////////////
@@ -270,7 +474,7 @@ function renderFeed(posts = [], append = true){
 
     img?.addEventListener(
       "click",
-      () => {
+      ()=>{
 
         const now =
           Date.now();
@@ -279,9 +483,17 @@ function renderFeed(posts = [], append = true){
           now - lastTap < 300
         ){
 
+          //////////////////////////////////////////////////
+          // ❤️ HEART
+          //////////////////////////////////////////////////
+
           window.animateHeart?.(
             img
           );
+
+          //////////////////////////////////////////////////
+          // ❤️ LIKE
+          //////////////////////////////////////////////////
 
           window.likePost?.(
             likeBtn,
@@ -292,6 +504,9 @@ function renderFeed(posts = [], append = true){
 
         lastTap = now;
 
+      },
+      {
+        passive: true
       }
     );
 
@@ -301,13 +516,16 @@ function renderFeed(posts = [], append = true){
 
     likeBtn?.addEventListener(
       "click",
-      () => {
+      ()=>{
 
         window.likePost?.(
           likeBtn,
           post.id
         );
 
+      },
+      {
+        passive: true
       }
     );
 
@@ -316,13 +534,14 @@ function renderFeed(posts = [], append = true){
     //////////////////////////////////////////////////
 
     commentBtn?.addEventListener(
-      "click",
-      () => {
+  "click",
+  ()=>{
 
-        window.commentPost?.(
-          post.id
-        );
+    window.openComments?.(post.id);
 
+  },
+      {
+        passive: true
       }
     );
 
@@ -332,12 +551,15 @@ function renderFeed(posts = [], append = true){
 
     shareBtn?.addEventListener(
       "click",
-      () => {
+      ()=>{
 
         window.sharePost?.(
           image
         );
 
+      },
+      {
+        passive: true
       }
     );
 
@@ -347,12 +569,15 @@ function renderFeed(posts = [], append = true){
 
     saveBtn?.addEventListener(
       "click",
-      () => {
+      ()=>{
 
         window.savePost?.(
           post.id
         );
 
+      },
+      {
+        passive: true
       }
     );
 
@@ -361,26 +586,39 @@ function renderFeed(posts = [], append = true){
     //////////////////////////////////////////////////
 
     append
+
       ? fragment.appendChild(clone)
+
       : fragment.prepend(clone);
 
   });
 
   //////////////////////////////////////////////////
-  // 🚀 SINGLE DOM APPEND
-  // (VERY IMPORTANT)
+  // 🚀 SINGLE DOM INSERT
   //////////////////////////////////////////////////
 
-  append
-    ? feed.appendChild(fragment)
-    : feed.prepend(fragment);
+  requestAnimationFrame(()=>{
+
+    append
+
+      ? feed.appendChild(fragment)
+
+      : feed.prepend(fragment);
+
+  });
 
   //////////////////////////////////////////////////
-  // 🧹 AUTO CLEAN OLD POSTS
+  // 🧹 AUTO CLEAN POSTS
   //////////////////////////////////////////////////
+
+  const LIMIT =
+
+    window.IS_LOW_END
+    ? 10
+    : 20;
 
   while(
-    feed.children.length > 15
+    feed.children.length > LIMIT
   ){
 
     feed.removeChild(
@@ -389,7 +627,135 @@ function renderFeed(posts = [], append = true){
 
   }
 
+  //////////////////////////////////////////////////
+  // 📊 STATE UPDATE
+  //////////////////////////////////////////////////
+
+  window.FEED_RENDER_STATE.page =
+    page;
+
+  console.log(
+
+    "✅ Batch Rendered:",
+
+    page,
+
+    "| Posts:",
+
+    batch.length
+
+  );
+
 }
+
+//////////////////////////////////////////////////
+// 🚀 LOAD NEXT BATCH
+//////////////////////////////////////////////////
+
+window.loadMoreFeed =
+function(){
+
+  if(
+    window.FEED_RENDER_STATE
+    .ended
+  ){
+    return;
+  }
+
+  if(
+    window.FEED_RENDER_STATE
+    .loading
+  ){
+    return;
+  }
+
+  window.FEED_RENDER_STATE
+    .loading = true;
+
+  const nextPage =
+
+    window.FEED_RENDER_STATE
+    .page + 1;
+
+  requestIdleCallback(()=>{
+
+    renderFeed(
+
+      window.FEED_RENDER_STATE
+      .posts,
+
+      true,
+
+      nextPage
+
+    );
+
+    window.FEED_RENDER_STATE
+      .loading = false;
+
+  });
+
+};
+
+//////////////////////////////////////////////////
+// 🚀 AUTO SCROLL LOAD
+//////////////////////////////////////////////////
+
+window.initFeedInfiniteScroll =
+function(){
+
+  window.removeEventListener(
+    "scroll",
+    window.__FEED_SCROLL_HANDLER
+  );
+
+  window.__FEED_SCROLL_HANDLER =
+  function(){
+
+    const nearBottom =
+
+      window.innerHeight +
+      window.scrollY >=
+
+      document.body.offsetHeight
+      - 1200;
+
+    if(nearBottom){
+
+      window.loadMoreFeed?.();
+
+    }
+
+  };
+
+  window.addEventListener(
+
+    "scroll",
+
+    window.__FEED_SCROLL_HANDLER,
+
+    {
+      passive: true
+    }
+
+  );
+
+};
+
+//////////////////////////////////////////////////
+// 🌍 GLOBAL EXPORT
+//////////////////////////////////////////////////
+
+window.renderFeed =
+renderFeed;
+
+//////////////////////////////////////////////////
+// 🎉 READY
+//////////////////////////////////////////////////
+
+console.log(
+  "🎉 FEED RENDERER V2 READY"
+);2
 
 /* FILE: main_js/feedService.js */
 
@@ -727,7 +1093,7 @@ async function createPost(){
 
         supabaseClient
 
-          .from("posts")
+          .from("minigram_feed")
 
           .insert([{
 
@@ -866,6 +1232,11 @@ window.addEventListener?.(
 
   }
 
+);
+
+console.log(
+  "createPost loaded:",
+  typeof createPost
 );
 
 /* FILE: main_js/pageloader/virtualGrid.js */

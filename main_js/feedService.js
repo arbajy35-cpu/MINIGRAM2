@@ -1,474 +1,200 @@
-console.log("🔥 FETCH SYSTEM READY");
+console.log("🔥 FEED SERVICE READY (STATE DRIVEN FINAL)");
 
 //////////////////////////////////////////////////
 // ⏱️ TIMEOUT WRAPPER
 //////////////////////////////////////////////////
 
-function fetchWithTimeout(
-  promise,
-  time = 5000
-){
-
+function fetchWithTimeout(promise, time = 5000){
   return Promise.race([
-
     promise,
-
     new Promise((_, reject)=>
-
-      setTimeout(()=>{
-
-        reject(
-          new Error("Timeout")
-        );
-
-      }, time)
-
+      setTimeout(()=> reject(new Error("Timeout")), time)
     )
-
   ]);
-
 }
 
 //////////////////////////////////////////////////
-// 🚀 LOAD FEED
+// 🚀 LOAD FEED (STATE DRIVEN ARCHITECTURE)
 //////////////////////////////////////////////////
 
 async function loadFeed(){
 
-  //////////////////////////////////////////////////
-  // 🛑 STATE CHECK
-  //////////////////////////////////////////////////
-
   if(!window.STATE) return;
+  if(STATE.LOADING || STATE.END) return;
 
-  if(
-    STATE.LOADING ||
-    STATE.END
-  ) return;
-
-  //////////////////////////////////////////////////
-  // 📦 FEED ELEMENT
-  //////////////////////////////////////////////////
-
-  const feed =
-    document.getElementById(
-      "feed"
-    );
-
-  if(!feed){
-
-    console.warn(
-      "⚠️ feed not found"
-    );
-
-    return;
-
-  }
-
-  //////////////////////////////////////////////////
-  // 🔄 LOADING START
-  //////////////////////////////////////////////////
+  const feed = document.getElementById("feed");
+  if(!feed) return;
 
   STATE.LOADING = true;
-
   window.showSkeleton?.();
 
   try{
 
-    console.log(
-      "🔥 FETCH START"
+    const from = STATE.PAGE * STATE.LIMIT;
+    const to = from + STATE.LIMIT - 1;
+
+    const postConfig =
+      window.PAGE_CONFIG?.[window.CURRENT_PAGE]?.post;
+
+    if(!postConfig?.enabled){
+      STATE.LOADING = false;
+      return;
+    }
+
+    const data = await fetchWithTimeout(
+      window.POST_PLUGIN?.fetch(from, to),
+      5000
     );
 
     //////////////////////////////////////////////////
-    // 🛑 SUPABASE CHECK
+    // ❌ NO DATA
     //////////////////////////////////////////////////
 
-    if(!window.supabaseClient){
-
-      throw new Error(
-        "Supabase not initialized"
-      );
-
-    }
-
-    //////////////////////////////////////////////////
-    // 📄 PAGINATION
-    //////////////////////////////////////////////////
-
-    const from =
-      STATE.PAGE * STATE.LIMIT;
-
-    const to =
-      from + STATE.LIMIT - 1;
-
-    //////////////////////////////////////////////////
-    // 🚀 PAGE CONFIG
-    //////////////////////////////////////////////////
-
-    const postConfig =
-
-      window.PAGE_CONFIG?.[
-        window.CURRENT_PAGE
-      ]?.post;
-
-    //////////////////////////////////////////////////
-    // 🛑 POST DISABLED
-    //////////////////////////////////////////////////
-
-    if(!postConfig?.enabled){
-
-      console.warn(
-        "⚠️ Post system disabled"
-      );
-
-      return;
-
-    }
-
-    //////////////////////////////////////////////////
-    // 🚀 FETCH FROM PLUGIN
-    //////////////////////////////////////////////////
-
-    const data =
-      await fetchWithTimeout(
-
-        window.POST_PLUGIN?.fetch(
-          from,
-          to
-        ),
-
-      5000);
-
-    //////////////////////////////////////////////////
-    // 📭 NO DATA
-    //////////////////////////////////////////////////
-
-    if(
-      !data ||
-      data.length === 0
-    ){
-
-      //////////////////////////////////////////////////
-      // 🛑 END
-      //////////////////////////////////////////////////
+    if(!data?.length){
 
       STATE.END = true;
 
-      //////////////////////////////////////////////////
-      // 😴 FALLBACK
-      //////////////////////////////////////////////////
+      if(STATE.PAGE === 0 && postConfig?.fallback){
 
-      if(
+        const fallback =
+          window.POST_PLUGIN?.fallback?.() || [];
 
-        STATE.PAGE === 0 &&
+        // 💣 STATE UPDATE FIRST
+        STATE.FEED.push(...fallback);
 
-        postConfig?.fallback
-
-      ){
-
-        window.renderFeed?.(
-
-          window.POST_PLUGIN?.fallback?.()
-
-        , true);
-
-      }
-
-      //////////////////////////////////////////////////
-      // 📭 EMPTY UI
-      //////////////////////////////////////////////////
-
-      else if(
-        STATE.PAGE === 0
-      ){
-
-        showEmptyFeed?.();
-
+        // 💣 FULL RERENDER FROM STATE
+        window.renderFeed?.(STATE.FEED, true);
       }
 
       return;
-
     }
 
     //////////////////////////////////////////////////
-    // ✅ SUCCESS
+    // ✅ SUCCESS FLOW
     //////////////////////////////////////////////////
 
-    STATE.FEED.push(
-      ...data
-    );
+    // 💣 1. STATE UPDATE (SOURCE OF TRUTH)
+    STATE.FEED.push(...data);
 
-    window.renderFeed?.(
-      data,
-      true
-    );
+    // 💣 2. UI ALWAYS FROM STATE (NO PARTIAL DATA)
+    window.renderFeed?.(STATE.FEED, true);
 
     STATE.PAGE++;
 
-    console.log(
-      "✅ FEED LOADED:",
-      data.length
-    );
+    console.log("✅ FEED LOADED:", data.length);
 
   }catch(err){
 
-    //////////////////////////////////////////////////
-    // ❌ ERROR
-    //////////////////////////////////////////////////
-
-    console.error(
-      "❌ FEED ERROR:",
-      err.message
-    );
-
-    //////////////////////////////////////////////////
-    // 😴 FALLBACK
-    //////////////////////////////////////////////////
+    console.error("❌ FEED ERROR:", err.message);
 
     const postConfig =
+      window.PAGE_CONFIG?.[window.CURRENT_PAGE]?.post;
 
-      window.PAGE_CONFIG?.[
-        window.CURRENT_PAGE
-      ]?.post;
+    if(STATE.PAGE === 0 && postConfig?.fallback){
 
-    if(
+      const fallback =
+        window.POST_PLUGIN?.fallback?.() || [];
 
-      STATE.PAGE === 0 &&
-
-      postConfig?.fallback
-
-    ){
-
-      window.renderFeed?.(
-
-        window.POST_PLUGIN?.fallback?.()
-
-      , true);
-
+      STATE.FEED.push(...fallback);
+      window.renderFeed?.(STATE.FEED, true);
     }
 
-    //////////////////////////////////////////////////
-    // 📢 TOAST
-    //////////////////////////////////////////////////
-
-    window.toast?.(
-      "Offline mode"
-    );
+    window.toast?.("Offline mode");
 
   }finally{
 
-    //////////////////////////////////////////////////
-    // 🧹 CLEANUP
-    //////////////////////////////////////////////////
-
     window.hideSkeleton?.();
-
     STATE.LOADING = false;
-
   }
-
 }
 
 //////////////////////////////////////////////////
-// 🚀 CREATE POST
+// 🚀 CREATE POST (STATE DRIVEN)
 //////////////////////////////////////////////////
 
 async function createPost(){
 
-  //////////////////////////////////////////////////
-  // 🛑 OFFLINE
-  //////////////////////////////////////////////////
-
   if(!window.supabaseClient){
-
-    window.toast?.(
-      "Offline - cannot post"
-    );
-
+    window.toast?.("Offline - cannot post");
     return;
-
   }
 
-  //////////////////////////////////////////////////
-  // 📷 INPUTS
-  //////////////////////////////////////////////////
-
-  const image =
-    prompt(
-      "Enter image URL"
-    );
-
+  const image = prompt("Enter image URL");
   if(!image) return;
 
-  const caption =
+  const caption = prompt("Caption") || "";
+  const username = prompt("Username") || "user";
 
-    prompt("Caption")
-
-    || "";
-
-  const username =
-
-    prompt("Username")
-
-    || "user";
-
-  //////////////////////////////////////////////////
-  // ⏳ LOADING
-  //////////////////////////////////////////////////
-
-  window.toast?.(
-    "Uploading..."
-  );
+  window.toast?.("Uploading...");
 
   try{
 
-    //////////////////////////////////////////////////
-    // 🚀 INSERT
-    //////////////////////////////////////////////////
-
     const { data, error } =
-
       await fetchWithTimeout(
-
         supabaseClient
-
-          .from("posts")
-
+          .from("minigram_feed")
           .insert([{
-
-            image_url:
-              image,
-
-            caption:
-              caption,
-
-            username:
-              username,
-
-            likes: 0
-
+            image_url: image,
+            caption,
+            username,
+            likes: 0,
+            comments: 0,
+            created_at: new Date().toISOString()
           }])
-
           .select()
-
-          .single()
-
-      , 5000);
-
-    //////////////////////////////////////////////////
-    // ❌ ERROR
-    //////////////////////////////////////////////////
-
-    if(error){
-
-      throw error;
-
-    }
-
-    //////////////////////////////////////////////////
-    // ✅ SUCCESS
-    //////////////////////////////////////////////////
-
-    window.toast?.(
-      "Uploaded"
-    );
-
-    window.renderFeed?.(
-      [data],
-      false
-    );
-
-    if(window.STATE){
-
-      STATE.FEED.unshift(
-        data
+          .single(),
+        5000
       );
 
-    }
+    if(error) throw error;
+
+    window.toast?.("Uploaded");
+
+    //////////////////////////////////////////////////
+    // 💣 STATE FIRST, THEN UI
+    //////////////////////////////////////////////////
+
+    STATE.FEED.unshift(data);
+
+    window.renderFeed?.(STATE.FEED, true);
 
   }catch(err){
 
-    //////////////////////////////////////////////////
-    // ❌ FAIL
-    //////////////////////////////////////////////////
-
-    console.error(
-      "❌ CREATE POST ERROR:",
-      err.message
-    );
-
-    window.toast?.(
-      "Failed (offline?)"
-    );
+    console.error("❌ CREATE POST ERROR:", err.message);
+    window.toast?.("Failed (offline?)");
 
   }
-
 }
 
 //////////////////////////////////////////////////
-// 📭 EMPTY FEED UI
+// 📭 EMPTY FEED
 //////////////////////////////////////////////////
 
 function showEmptyFeed(){
 
-  const feed =
-    document.getElementById(
-      "feed"
-    );
-
+  const feed = document.getElementById("feed");
   if(!feed) return;
 
   feed.innerHTML = `
-
     <div class="emptyFeed">
-
-      <h3>
-        No posts yet
-      </h3>
-
-      <p>
-        Start by creating one 🚀
-      </p>
-
+      <h3>No posts yet</h3>
+      <p>Start by creating one 🚀</p>
     </div>
-
   `;
-
 }
 
 //////////////////////////////////////////////////
-// 🌍 GLOBAL EXPORT
+// 🌍 EXPORTS
 //////////////////////////////////////////////////
 
-window.loadFeed =
-  loadFeed;
-
-window.createPost =
-  createPost;
-
-window.showEmptyFeed =
-  showEmptyFeed;
+window.loadFeed = loadFeed;
+window.createPost = createPost;
+window.showEmptyFeed = showEmptyFeed;
 
 //////////////////////////////////////////////////
-// 💀 GLOBAL ERROR LOGGER
+// 💀 ERROR LOG
 //////////////////////////////////////////////////
 
-window.addEventListener?.(
-
-  "error",
-
-  e => {
-
-    console.log(
-
-      "💀 ERROR IN FILE:",
-
-      e.filename,
-
-      e.message
-
-    );
-
-  }
-
-);
+window.addEventListener?.("error", e=>{
+  console.log("💀 ERROR:", e.message);
+});
