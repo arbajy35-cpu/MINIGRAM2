@@ -275,6 +275,19 @@ async function cleanupPage(pageName) {
   if (!pageName) return;
 
   try {
+    //////////////////////////////////////////////////
+    // ✅ SPECIAL CLEANUP FOR REELS
+    //////////////////////////////////////////////////
+    if (pageName === "reels") {
+      console.log("🧹 Special cleanup for reels page...");
+      if (typeof window.reelsDestroy === "function") {
+        await window.reelsDestroy();
+      }
+    }
+
+    //////////////////////////////////////////////////
+    // ✅ GENERIC PAGE CLEANUP
+    //////////////////////////////////////////////////
     const destroyFn = window.FUNCTIONS?.[
       pageName + "Destroy"
     ];
